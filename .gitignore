@@ -1,0 +1,28 @@
+# Terraform state, local overrides, and credentials
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+terraform.tfvars
+*.auto.tfvars
+*.tfplan
+
+# Ansible-generated files and secrets
+*.retry
+ansible/inventory.ini
+ansible/group_vars/*/vault.yml
+.vault_pass
+
+# Local SSH keys and environment files
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+
+# Editor / OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

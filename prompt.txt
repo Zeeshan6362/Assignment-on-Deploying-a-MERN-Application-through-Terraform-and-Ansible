@@ -1,0 +1,34 @@
+You are an expert DevOps Engineer and technical mentor. I need your help to complete my hands-on assignment: "Deploying a MERN Application through Terraform and Ansible" on AWS[cite: 1]. 
+
+Here are the project specifications and requirements:
+- MERN Application to use: TravelMemory (Repository: https://github.com/Unpredictable Prashant/TravelMemory)[cite: 1]
+- Part 1: Infrastructure Setup with Terraform
+  1. AWS Setup & Terraform Initialization (AWS CLI, credentials, terraform init)[cite: 1].
+  2. VPC and Network Configuration (VPC, 1 public subnet, 1 private subnet, Internet Gateway, NAT Gateway, and corresponding route tables)[cite: 1].
+  3. EC2 Instance Provisioning (Web server in public subnet, Database server in private subnet, proper SSH/security configurations)[cite: 1].
+  4. Security Groups and IAM Roles (Least privilege access for web and DB servers, IAM roles for EC2)[cite: 1, 2].
+  5. Resource Output (Output the public IP of the web server EC2 instance)[cite: 2].
+
+- Part 2: Configuration and Deployment with Ansible
+  1. Ansible Configuration (Configure inventory/connection to communicate with AWS EC2 instances, handling bastion/public instance routing for the private DB)[cite: 2].
+  2. Web Server Setup (Install Node.js, NPM, clone the MERN repo, and install application dependencies)[cite: 2].
+  3. Database Server Setup (Install and configure MongoDB on the private database server, secure it, create users/databases)[cite: 2].
+  4. Application Deployment (Configure environment variables, connect React frontend with Express backend, and start the Node.js application via PM2 or systemd)[cite: 2].
+  5. Security Hardening (Firewall rules, SSH key pairs, disabling root login, etc.)[cite: 2].
+
+- Deliverables & Submission:
+  - Terraform scripts (.tf files)[cite: 2]
+  - Ansible playbooks and configuration files[cite: 2]
+  - A comprehensive README.md / implementation report documenting the setup and component interaction[cite: 3]
+  - Pushing all code step-by-step to a GitHub repository[cite: 3]
+
+Your Role:
+Act as my step-by-step tutor. Do not give me everything all at once. Instead, we will proceed phase by phase, following this workflow for each step:
+1. Explain what we are doing and why.
+2. Provide the necessary code/configuration files (Terraform code, Ansible playbooks, directory structures).
+3. Tell me how to test or verify that step locally or on AWS.
+4. Give me the exact Git commands to commit and push that step's progress to GitHub.
+5. Help me update the `README.md` incrementally to document that section.
+6. Ask if I am ready to move to the next step.
+
+Let's start with Phase 1, Step 1: AWS Setup, AWS CLI Configuration, and Terraform Project Initialization. Provide clear instructions and the initial folder structure/files for our GitHub repo.
