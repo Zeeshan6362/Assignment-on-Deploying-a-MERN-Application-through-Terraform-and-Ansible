@@ -1,0 +1,6 @@
+mongodb_repo_file: /etc/yum.repos.d/mongodb-org-8.0.repo
+mongodb_config_file: /etc/mongod.conf
+mongodb_users_script: /var/tmp/travelmemory-ensure-mongodb-users.js
+mongodb_user_fingerprint_file: /var/lib/travelmemory/mongodb-app-user.sha256
+
+mongodb_app_password_fingerprint: "{{ vault_mongodb_app_password | hash('sha256') }}"

@@ -1,0 +1,57 @@
+(() => {
+  const adminUser = process.env.TM_MONGO_ADMIN_USER;
+  const adminPassword = process.env.TM_MONGO_ADMIN_PASSWORD;
+  const appUser = process.env.TM_MONGO_APP_USER;
+  const appPassword = process.env.TM_MONGO_APP_PASSWORD;
+  const appDatabase = process.env.TM_MONGO_APP_DATABASE;
+  const previousAppFingerprint = process.env.TM_PREVIOUS_APP_FINGERPRINT || "";
+  const desiredAppFingerprint = process.env.TM_DESIRED_APP_FINGERPRINT;
+
+  if (!adminUser || !adminPassword || !appUser || !appPassword || !appDatabase || !desiredAppFingerprint) {
+    throw new Error("Required TravelMemory MongoDB bootstrap environment is missing.");
+  }
+
+  const adminDb = db.getSiblingDB("admin");
+  let adminAuthenticated = false;
+  try {
+    adminAuthenticated = adminDb.auth(adminUser, adminPassword).ok === 1;
+  } catch (_) {
+    adminAuthenticated = false;
+  }
+
+  if (!adminAuthenticated) {
+    // On a new, access-controlled MongoDB instance, localhost exception permits
+    // creating the first user. If an admin already exists, this fails safely.
+    adminDb.createUser({
+      user: adminUser,
+      pwd: adminPassword,
+      roles: [{ role: "root", db: "admin" }]
+    });
+    adminAuthenticated = adminDb.auth(adminUser, adminPassword).ok === 1;
+  }
+
+  if (!adminAuthenticated) {
+    throw new Error("MongoDB admin authentication failed. Check the encrypted admin credentials.");
+  }
+
+  const appDb = db.getSiblingDB(appDatabase);
+  const existingAppUser = appDb.getUser(appUser);
+  let appUserChanged = false;
+
+  if (!existingAppUser) {
+    appDb.createUser({
+      user: appUser,
+      pwd: appPassword,
+      roles: [{ role: "readWrite", db: appDatabase }]
+    });
+    appUserChanged = true;
+  } else if (previousAppFingerprint !== desiredAppFingerprint) {
+    appDb.updateUser(appUser, {
+      pwd: appPassword,
+      roles: [{ role: "readWrite", db: appDatabase }]
+    });
+    appUserChanged = true;
+  }
+
+  print(appUserChanged ? "TRAVELMEMORY_APP_USER_CHANGED" : "TRAVELMEMORY_APP_USER_UNCHANGED");
+})();

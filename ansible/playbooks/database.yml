@@ -1,0 +1,138 @@
+---
+- name: Configure the private MongoDB host
+  hosts: database
+  become: true
+  gather_facts: true
+
+  pre_tasks:
+    - name: Require encrypted MongoDB credentials
+      ansible.builtin.assert:
+        that:
+          - vault_mongodb_admin_password | length >= 24
+          - vault_mongodb_app_password | length >= 24
+          - "'REPLACE_' not in vault_mongodb_admin_password"
+          - "'REPLACE_' not in vault_mongodb_app_password"
+        fail_msg: Create and encrypt ansible/group_vars/all/vault.yml with unique passwords of at least 24 characters.
+      no_log: true
+
+  tasks:
+    - name: Configure the official MongoDB repository
+      ansible.builtin.template:
+        src: ../templates/mongodb-org.repo.j2
+        dest: "{{ mongodb_repo_file }}"
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Install MongoDB Community Edition
+      ansible.builtin.dnf:
+        name: mongodb-org
+        state: present
+        update_cache: true
+
+    - name: Configure MongoDB for authenticated private-subnet access
+      ansible.builtin.template:
+        src: ../templates/mongod.conf.j2
+        dest: "{{ mongodb_config_file }}"
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Restart mongod
+
+    - name: Ensure mongod is enabled and started
+      ansible.builtin.systemd_service:
+        name: mongod
+        enabled: true
+        state: started
+
+    - name: Apply MongoDB configuration before user setup
+      ansible.builtin.meta: flush_handlers
+
+    - name: Wait for MongoDB on localhost
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: 27017
+        delay: 2
+        timeout: 90
+
+    - name: Ensure the application data directory exists
+      ansible.builtin.file:
+        path: /var/lib/travelmemory
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Read the previous application-user password fingerprint
+      ansible.builtin.slurp:
+        src: "{{ mongodb_user_fingerprint_file }}"
+      register: previous_mongodb_fingerprint_file
+      failed_when: false
+      no_log: true
+
+    - name: Set the previous MongoDB application-user password fingerprint
+      ansible.builtin.set_fact:
+        previous_mongodb_app_password_fingerprint: >-
+          {{ (previous_mongodb_fingerprint_file.content | b64decode | trim)
+             if previous_mongodb_fingerprint_file.content is defined else '' }}
+      no_log: true
+
+    - name: Install the MongoDB user bootstrap script
+      ansible.builtin.template:
+        src: ../templates/ensure-mongodb-users.js.j2
+        dest: "{{ mongodb_users_script }}"
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Ensure a MongoDB administrator and least-privilege application user exist
+      ansible.builtin.command:
+        argv:
+          - mongosh
+          - --quiet
+          - --host
+          - 127.0.0.1
+          - --file
+          - "{{ mongodb_users_script }}"
+      environment:
+        TM_MONGO_ADMIN_USER: "{{ mongodb_admin_user }}"
+        TM_MONGO_ADMIN_PASSWORD: "{{ mongodb_admin_password }}"
+        TM_MONGO_APP_USER: "{{ mongodb_app_user }}"
+        TM_MONGO_APP_PASSWORD: "{{ mongodb_app_password }}"
+        TM_MONGO_APP_DATABASE: "{{ travelmemory_database_name }}"
+        TM_PREVIOUS_APP_FINGERPRINT: "{{ previous_mongodb_app_password_fingerprint }}"
+        TM_DESIRED_APP_FINGERPRINT: "{{ mongodb_app_password_fingerprint }}"
+      register: mongodb_users_result
+      changed_when: "'TRAVELMEMORY_APP_USER_CHANGED' in mongodb_users_result.stdout"
+      no_log: true
+
+    - name: Save the current application-user password fingerprint
+      ansible.builtin.copy:
+        content: "{{ mongodb_app_password_fingerprint }}\n"
+        dest: "{{ mongodb_user_fingerprint_file }}"
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+
+    - name: Verify MongoDB answers locally with authentication enabled
+      ansible.builtin.command:
+        argv:
+          - mongosh
+          - --quiet
+          - --host
+          - 127.0.0.1
+          - --eval
+          - "if (db.getSiblingDB('admin').auth(process.env.TM_MONGO_ADMIN_USER, process.env.TM_MONGO_ADMIN_PASSWORD).ok !== 1) quit(1); print(db.adminCommand('ping').ok)"
+      environment:
+        TM_MONGO_ADMIN_USER: "{{ mongodb_admin_user }}"
+        TM_MONGO_ADMIN_PASSWORD: "{{ mongodb_admin_password }}"
+      register: mongodb_ping
+      changed_when: false
+      no_log: true
+
+  handlers:
+    - name: Restart mongod
+      ansible.builtin.systemd_service:
+        name: mongod
+        state: restarted

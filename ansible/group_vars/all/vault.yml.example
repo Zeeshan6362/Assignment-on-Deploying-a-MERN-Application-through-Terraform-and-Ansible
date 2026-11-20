@@ -1,0 +1,6 @@
+# Copy this file to vault.yml, replace both passwords with unique values,
+# then encrypt vault.yml with ansible-vault. Never commit the unencrypted file.
+vault_mongodb_admin_user: travelmemory-admin
+vault_mongodb_admin_password: REPLACE_WITH_A_LONG_RANDOM_SECRET
+vault_mongodb_app_user: travelmemory-app
+vault_mongodb_app_password: REPLACE_WITH_ANOTHER_LONG_RANDOM_SECRET

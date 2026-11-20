@@ -1,0 +1,11 @@
+# Use scripts/generate-inventory.sh after Terraform has been applied.
+# The generated inventory.ini and ssh_config are local and ignored by Git.
+[web]
+travelmemory-web ansible_host=travelmemory-web travelmemory_public_dns=WEB_PUBLIC_DNS
+
+[database]
+travelmemory-database ansible_host=travelmemory-database database_private_ip=10.0.2.10
+
+[all:vars]
+ansible_user=ec2-user
+ansible_python_interpreter=/usr/bin/python3

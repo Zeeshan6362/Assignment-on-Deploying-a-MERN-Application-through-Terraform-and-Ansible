@@ -11,6 +11,7 @@ terraform.tfvars
 # Ansible-generated files and secrets
 *.retry
 ansible/inventory.ini
+ansible/ssh_config
 ansible/group_vars/*/vault.yml
 .vault_pass
 
