@@ -2,7 +2,8 @@
 set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-project_root="$(cd -- "${script_dir}/../.." && pwd)"
+ansible_dir="$(cd -- "${script_dir}/.." && pwd)"
+project_root="$(cd -- "${ansible_dir}/.." && pwd)"
 terraform_dir="${project_root}/terraform"
 ssh_key="${HOME}/.ssh/travelmemory-terraform"
 
@@ -16,7 +17,7 @@ web_dns="$(terraform -chdir="${terraform_dir}" output -raw web_public_dns)"
 database_ip="$(terraform -chdir="${terraform_dir}" output -raw database_private_ip)"
 
 umask 077
-cat > "${script_dir}/inventory.ini" <<EOF
+cat > "${ansible_dir}/inventory.ini" <<EOF
 [web]
 travelmemory-web ansible_host=travelmemory-web travelmemory_public_dns=${web_dns}
 
@@ -28,7 +29,7 @@ ansible_user=ec2-user
 ansible_python_interpreter=/usr/bin/python3
 EOF
 
-cat > "${script_dir}/ssh_config" <<EOF
+cat > "${ansible_dir}/ssh_config" <<EOF
 Host travelmemory-web
     HostName ${web_ip}
     User ec2-user
@@ -45,7 +46,7 @@ Host travelmemory-database
     ProxyJump travelmemory-web
 EOF
 
-chmod 600 "${script_dir}/inventory.ini" "${script_dir}/ssh_config"
+chmod 600 "${ansible_dir}/inventory.ini" "${ansible_dir}/ssh_config"
 printf 'Created local Ansible inventory and SSH config.\n'
 printf 'Web address: http://%s\n' "${web_dns}"
 printf 'Database private address: %s (reachable through the web host)\n' "${database_ip}"

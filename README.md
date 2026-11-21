@@ -3,15 +3,38 @@
 
 # TravelMemory with Terraform and Ansible
 
-This repository prepares the TravelMemory MERN application for a single AWS deployment, managed with Terraform and configured with Ansible. It also includes a local Docker Compose demo. No AWS resources are created by reading, validating, or preparing these files.
+This repository deploys the TravelMemory MERN application to AWS with Terraform and configures it with Ansible. It also includes a Docker Compose demo for local learning. The AWS deployment described here was completed as a temporary learning exercise and has since been destroyed.
 
-## Current AWS status and cost controls
+## AWS account access: challenge and resolution
 
-The account details shared earlier showed $120 in credits and a $20 project spend limit. Separately, the configured AWS role’s policy simulation returned organization-level explicit denies for required VPC, EC2, and IAM actions. An IAM allow policy cannot override those denies. **Do not run Terraform plan or apply until the account owner has resolved the organization restriction and rechecked permissions.** No account setting is changed by this repository.
+The first AWS account context used for the project was governed by an AWS Organizations service control policy (SCP). Policy simulation showed explicit denies for the VPC, EC2, and IAM actions required by this assignment. An IAM allow policy could not override those organization-level denies, so Terraform could not deploy the stack in that context.
 
-The project spend limit and the $1 budget alert serve different purposes: the budget sends an alert, while the project limit can pause eligible project usage. Neither should be treated as an exact out-of-pocket cap. Credits may not cover every charge, and taxes, usage outside the project, and cleanup delays can still matter. The planned infrastructure includes two `t3.micro` instances, two 12 GiB gp3 volumes, one NAT Gateway and its public IPv4 address, and a public IPv4 address for the web server. The NAT Gateway accrues charges while it exists. Review current prices and spend-limit behavior in the AWS console before any future deployment.
+After Advanced features were activated in AWS account settings, AWS provided access to the organization management account. We switched the AWS CLI to a profile for that account, confirmed the active identity with `aws sts get-caller-identity`, and used that account for the deployment. Terraform then created the infrastructure and Ansible deployed the application. This records the observed account setup for this project; it does not imply that activating Advanced features removes every organization policy or grants permissions in every AWS account.
 
-Terraform has a `deployment_confirmed` guard that defaults to `false`. It is a deliberate-use check, **not** a spending limit. Once deployment is authorized and all required AWS actions are allowed, the operator must review the plan, deploy for the shortest practical window, and destroy the stack immediately afterward. Then verify in the AWS console that the instances, NAT Gateway, Elastic IP, and volumes are gone.
+AWS credits and budgets are not guaranteed hard spending caps. A budget alert notifies the account owner; it does not automatically stop every resource. NAT Gateways, public IPv4 addresses, EC2 instances, and storage can incur charges while they exist, and accrued usage may remain on the bill after teardown. Review the current account terms and estimated charges before deployment, keep the live window short, and verify deletion in the AWS console afterward.
+
+## What the project builds
+
+Terraform provisions a VPC with public and private subnets, an Internet Gateway, a NAT Gateway, routing, security groups, two EC2 instances, an SSH key pair, and EC2 instance roles. The web host is public; the MongoDB host is private and is reached by Ansible through the web host using SSH ProxyJump. MongoDB is reachable only from the web security group. The current application design exposes its API on port 3001 so browsers can reach it.
+
+Ansible installs and configures MongoDB 8.0 with authentication, creates an administrator and a least-privilege application user, installs the TravelMemory backend and frontend, builds the React frontend with the API URL, and configures the API service and nginx. It also checks the API health route and the served frontend.
+
+## Deployment outcome
+
+The temporary AWS deployment completed successfully. The browser displayed the TravelMemory app, a sample trip was saved and viewed, and the API health check returned `status: ok` with the database connected. Terraform then reported **21 resources destroyed**, including the EC2 instances and NAT Gateway. The account owner confirmed the AWS resources had stopped. The deployment is therefore not live now; recreating it requires a new Terraform apply followed by Ansible.
+
+## AWS account issues and deployment fixes
+
+The deployment exposed several practical issues that are documented and corrected in the project files:
+
+- The initial account role was explicitly denied required infrastructure actions by an organization SCP. The project was deployed using the management-account profile made available after Advanced features activation.
+- Ansible ignored `ansible.cfg` when run from the world-writable Windows-mounted WSL directory. Set `ANSIBLE_CONFIG` explicitly from the `ansible/` directory before running Ansible.
+- The inventory generator originally wrote `inventory.ini` and `ssh_config` under `ansible/scripts/`, while Ansible expected them under `ansible/`. The script now writes them beside `ansible.cfg`.
+- The playbooks now load shared settings and the encrypted vault file explicitly with `vars_files`.
+- MongoDB 8 rejected the obsolete `storage.journal.enabled` configuration option. Journaling is enabled by default, so that option was removed.
+- The web play now creates `/etc/travelmemory` before writing the backend environment file.
+- A new WSL terminal did not have the SSH key loaded in its SSH agent. Start an agent and add the project key before connecting if prompted for SSH authentication.
+- The frontend’s API and CORS configuration use the EC2 DNS hostname. Open the frontend using that hostname rather than its raw IP address so the browser origin matches the configured API origin.
 
 ## Local demo
 
@@ -39,9 +62,7 @@ If the source checkout is elsewhere, export `TRAVELMEMORY_SOURCE` with its WSL p
 
 ## Terraform
 
-The `terraform/` directory defines a VPC, public and private subnets, internet and NAT gateways, security groups, two EC2 instances, SSH key registration, and instance roles for Systems Manager. The database instance is private; Ansible reaches it through the web instance using SSH ProxyJump. The React browser client calls the API on port 3001, so that API port is publicly reachable in the current design; MongoDB is restricted to the web instance’s security group.
-
-From WSL, initialize and validate the configuration without creating AWS infrastructure:
+Terraform files are in `terraform/`. Initialize and validate without creating AWS infrastructure:
 
 ```bash
 cd "/mnt/c/Users/zeesh/Downloads/Terraform and Anisble project/terraform"
@@ -50,13 +71,27 @@ terraform fmt -check
 terraform validate
 ```
 
-`terraform.tfvars.example` is a template. If deployment is authorized later, copy it to the ignored `terraform.tfvars`, replace `admin_cidr` with your current public IPv4 address in `/32` form, and keep `deployment_confirmed = false` until the final review. Do not commit `terraform.tfvars`, Terraform state, or saved plans.
+For an AWS deployment, configure CLI credentials for the intended account and select `us-east-1`. Confirm the identity before using Terraform:
 
-## Ansible preparation and deployment
+```bash
+export AWS_PROFILE=travelmemory-tf
+export AWS_REGION=us-east-1
+aws sts get-caller-identity
+```
 
-Ansible installs MongoDB 8.0 on the private Amazon Linux 2023 host, enables authentication, creates an administrator and a least-privilege application user, installs the TravelMemory backend and frontend on the web host, builds the React app with its API URL, configures systemd and nginx, and checks the API and site health. MongoDB and the web services are kept on separate instances.
+`terraform.tfvars.example` is a template. Copy it to the ignored `terraform.tfvars` and replace `admin_cidr` with the administrator’s current public IPv4 address in `/32` form. Keep `deployment_confirmed` false until reviewing the account, plan, cost exposure, and teardown steps. This variable is a deliberate-use guard, not a spending limit. The apply command requires the explicit confirmation variable:
 
-Install Ansible in WSL before deployment. Create the local encrypted secret file; it is ignored by Git:
+```bash
+terraform plan -var="deployment_confirmed=true" -out=travelmemory.tfplan
+terraform show travelmemory.tfplan
+terraform apply travelmemory.tfplan
+```
+
+Do not commit `terraform.tfvars`, Terraform state, or saved plans.
+
+## Ansible setup and deployment
+
+Install Ansible in WSL and create the local encrypted secret file. The vault file is ignored by Git:
 
 ```bash
 sudo apt update
@@ -66,44 +101,34 @@ cd "/mnt/c/Users/zeesh/Downloads/Terraform and Anisble project/ansible"
 cp group_vars/all/vault.yml.example group_vars/all/vault.yml
 ```
 
-Edit `group_vars/all/vault.yml` and replace both placeholder passwords with different, randomly generated secrets of at least 24 characters. Then encrypt it:
+Edit `group_vars/all/vault.yml`, replacing both placeholders with different, randomly generated secrets of at least 24 characters, then encrypt it:
 
 ```bash
 ansible-vault encrypt group_vars/all/vault.yml
 ```
 
-Keep the vault password outside the repository. Do not put it in shell history, source control, or an unencrypted file in the project. The sample vault file contains placeholders only.
+Keep the vault password outside the repository. Do not put it in shell history, source control, or an unencrypted project file.
 
-When the AWS permission restriction is resolved and deployment is authorized, use this order. Terraform creates only the infrastructure; Ansible then installs and starts the application:
+After Terraform apply succeeds, generate the local inventory and SSH configuration, test access, and run the playbooks:
 
 ```bash
-cd "/mnt/c/Users/zeesh/Downloads/Terraform and Anisble project/terraform"
-terraform apply -var="deployment_confirmed=true"
-
-cd ../ansible
+cd "/mnt/c/Users/zeesh/Downloads/Terraform and Anisble project/ansible"
+export ANSIBLE_CONFIG="$PWD/ansible.cfg"
 ./scripts/generate-inventory.sh
-ansible all -m ping
+ansible all -m ping --ask-vault-pass
 ansible-playbook site.yml --ask-vault-pass
 ```
 
-Open the web server’s HTTP address shown by the inventory generator, confirm the application and `/health` endpoint work, and capture screenshots. Then remove the billable stack right away:
+Enter the vault password when prompted. The generator reads Terraform outputs and writes `inventory.ini` and `ssh_config` into `ansible/`; both are ignored by Git. The private database host is reached through the web host. The SSH private key must be at `~/.ssh/travelmemory-terraform`, matching the public-key path in Terraform. If the key is passphrase-protected and not loaded in the current WSL session, start `ssh-agent` and add the key with `ssh-add`.
+
+When the playbook succeeds, open the web address printed by the inventory generator using its DNS hostname. Verify the app and API, capture any required evidence, then destroy the stack immediately:
 
 ```bash
 cd ../terraform
 terraform destroy -var="deployment_confirmed=true"
 ```
 
-Wait for destroy to finish and verify in the AWS console that EC2 instances, the NAT Gateway, its Elastic IP, and EBS volumes are gone. Destroying AWS resources does not remove local Terraform state or the local SSH key; keep those protected.
-
-To rerun Ansible after the infrastructure exists, generate the local SSH configuration and inventory from Terraform outputs, then configure the hosts:
-
-```bash
-./scripts/generate-inventory.sh
-ansible all -m ping
-ansible-playbook site.yml --ask-vault-pass
-```
-
-The script expects the SSH private key at `~/.ssh/travelmemory-terraform`, matching the public-key path in Terraform. It writes `inventory.ini` and `ssh_config` locally; both are ignored by Git. The database host is reached through the web instance. The generated inventory does not exist before Terraform creates those hosts.
+Wait for destroy to finish. Verify in the AWS console that EC2 instances, the NAT Gateway, its Elastic IP, and EBS volumes are gone. Destroying AWS resources does not remove local Terraform state or the local SSH key; keep those protected.
 
 ## Repository layout
 

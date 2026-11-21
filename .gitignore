@@ -14,6 +14,8 @@ ansible/inventory.ini
 ansible/ssh_config
 ansible/group_vars/*/vault.yml
 .vault_pass
+ansible/scripts/inventory.ini
+ansible/scripts/ssh_config
 
 # Local SSH keys and environment files
 *.pem

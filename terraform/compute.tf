@@ -53,13 +53,6 @@ resource "aws_iam_role" "ec2" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "ssm_core" {
-  for_each = local.ec2_roles
-
-  role       = aws_iam_role.ec2[each.key].name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-}
-
 resource "aws_iam_instance_profile" "ec2" {
   for_each = local.ec2_roles
 
@@ -78,7 +71,7 @@ resource "aws_security_group" "web" {
   vpc_id      = aws_vpc.main.id
 
   ingress {
-    description = "SSH from administrator's current public IPv4 address"
+    description = "SSH from the administrator current public IPv4 address"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"

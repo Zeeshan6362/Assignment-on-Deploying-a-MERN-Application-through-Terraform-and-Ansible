@@ -1,6 +1,9 @@
 ---
 - name: Deploy the TravelMemory web and API services
   hosts: web
+  vars_files:
+    - ../group_vars/all/vars.yml
+    - ../group_vars/all/vault.yml
   become: true
   gather_facts: true
 
@@ -170,6 +173,14 @@
         group: root
         mode: "0644"
       when: travelmemory_frontend_needs_build | bool
+
+    - name: Ensure backend configuration directory exists
+      ansible.builtin.file:
+        path: /etc/travelmemory
+        state: directory
+        owner: root
+        group: ec2-user
+        mode: "0750"
 
     - name: Configure the backend environment
       ansible.builtin.template:

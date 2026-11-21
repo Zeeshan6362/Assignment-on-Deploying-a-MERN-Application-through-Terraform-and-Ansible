@@ -1,6 +1,9 @@
 ---
 - name: Configure the private MongoDB host
   hosts: database
+  vars_files:
+    - ../group_vars/all/vars.yml
+    - ../group_vars/all/vault.yml
   become: true
   gather_facts: true
 
