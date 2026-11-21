@@ -1,6 +1,3 @@
-# Note to Evaluator: I am facing issues with deployment due to Amazon Free tier account. Its not allowing me to deploy EC2 using Terraform plan and I am planning to upgrade to a paid plan. I have requested extension for this project and plan to complete it before 26h November.
-
-
 # TravelMemory with Terraform and Ansible
 
 This repository deploys the TravelMemory MERN application to AWS with Terraform and configures it with Ansible. It also includes a Docker Compose demo for local learning. The AWS deployment described here was completed as a temporary learning exercise and has since been destroyed.
@@ -12,6 +9,11 @@ The first AWS account context used for the project was governed by an AWS Organi
 After Advanced features were activated in AWS account settings, AWS provided access to the organization management account. We switched the AWS CLI to a profile for that account, confirmed the active identity with `aws sts get-caller-identity`, and used that account for the deployment. Terraform then created the infrastructure and Ansible deployed the application. This records the observed account setup for this project; it does not imply that activating Advanced features removes every organization policy or grants permissions in every AWS account.
 
 AWS credits and budgets are not guaranteed hard spending caps. A budget alert notifies the account owner; it does not automatically stop every resource. NAT Gateways, public IPv4 addresses, EC2 instances, and storage can incur charges while they exist, and accrued usage may remain on the bill after teardown. Review the current account terms and estimated charges before deployment, keep the live window short, and verify deletion in the AWS console afterward.
+
+<img width="1900" height="790" alt="Screenshot 2026-11-21 211857" src="https://github.com/user-attachments/assets/52162311-a8dd-4322-8e18-47fd615d59bd" />
+
+<img width="1268" height="534" alt="Screenshot 2026-11-21 214816" src="https://github.com/user-attachments/assets/a4c126a9-8dd6-4e7b-bc88-da3e90260158" />
+
 
 ## What the project builds
 
@@ -89,6 +91,11 @@ terraform apply travelmemory.tfplan
 
 Do not commit `terraform.tfvars`, Terraform state, or saved plans.
 
+<img width="1295" height="1033" alt="Screenshot 2026-11-21 220241" src="https://github.com/user-attachments/assets/4ff48638-0427-4589-b50c-fbac5b3bf906" />
+
+<img width="986" height="554" alt="Screenshot 2026-11-21 224411" src="https://github.com/user-attachments/assets/9b863831-d141-4c44-9147-acbc9c517cab" />
+
+
 ## Ansible setup and deployment
 
 Install Ansible in WSL and create the local encrypted secret file. The vault file is ignored by Git:
@@ -129,6 +136,40 @@ terraform destroy -var="deployment_confirmed=true"
 ```
 
 Wait for destroy to finish. Verify in the AWS console that EC2 instances, the NAT Gateway, its Elastic IP, and EBS volumes are gone. Destroying AWS resources does not remove local Terraform state or the local SSH key; keep those protected.
+
+<img width="1292" height="1033" alt="Screenshot 2026-11-21 224907" src="https://github.com/user-attachments/assets/a02398ac-d087-4593-a29e-a9e6dd5d2d25" />
+
+<img width="1290" height="1021" alt="Screenshot 2026-11-21 225152" src="https://github.com/user-attachments/assets/64debe34-748b-4d02-bb6c-045b7bf7dcd0" />
+
+<img width="1284" height="1028" alt="Screenshot 2026-11-21 230617" src="https://github.com/user-attachments/assets/32a89c39-08ff-4f63-bab9-8ad347962f13" />
+
+<img width="1267" height="1011" alt="Screenshot 2026-11-21 225349" src="https://github.com/user-attachments/assets/a9c5c2a7-8511-4d18-9d49-d488a324329f" />
+
+<img width="1393" height="828" alt="Screenshot 2026-11-21 233526" src="https://github.com/user-attachments/assets/00d11881-8af6-493b-8f3a-eaf1d384707c" />
+
+<img width="1908" height="442" alt="Screenshot 2026-11-21 231323" src="https://github.com/user-attachments/assets/b9f8f2d0-bccb-47f1-a88b-02d7a8fc7ef5" />
+
+<img width="1906" height="475" alt="Screenshot 2026-11-21 231341" src="https://github.com/user-attachments/assets/59bd8383-8a2a-4779-8a2d-8d96fb0bc4bc" />
+
+<img width="1290" height="1035" alt="Screenshot 2026-11-21 233453" src="https://github.com/user-attachments/assets/883d1f9e-3b07-4385-8def-91847dad93d9" />
+
+<img width="1918" height="1023" alt="Screenshot 2026-11-21 233949" src="https://github.com/user-attachments/assets/a3d95b26-a34a-4562-ac05-664114e4639d" />
+
+<img width="1919" height="1017" alt="Screenshot 2026-11-21 234043" src="https://github.com/user-attachments/assets/35292e74-26a0-4582-9055-d7acdcc9198f" />
+
+<img width="1295" height="998" alt="Screenshot 2026-11-21 234158" src="https://github.com/user-attachments/assets/16bf40ee-59c4-42fa-a81a-d8a9cc9e508d" />
+
+<img width="968" height="411" alt="Screenshot 2026-11-21 234225" src="https://github.com/user-attachments/assets/82954683-1868-4029-abd4-da2902d665bd" />
+
+<img width="1919" height="910" alt="Screenshot 2026-11-21 234307" src="https://github.com/user-attachments/assets/3a67a6bc-8dc9-43f8-b12f-dcc27666e15d" />
+
+<img width="1172" height="1004" alt="Screenshot 2026-11-21 234352" src="https://github.com/user-attachments/assets/adf2b9a4-7b36-4d87-8846-c068cecf5e42" />
+
+<img width="1919" height="1034" alt="Screenshot 2026-11-21 234415" src="https://github.com/user-attachments/assets/49ecf02a-7d7f-4188-8991-cf6864cf009b" />
+
+<img width="1919" height="1029" alt="Screenshot 2026-11-21 234433" src="https://github.com/user-attachments/assets/5baecbd3-0d84-4b9c-b4a1-e5fcb88fe5c7" />
+
+<img width="1304" height="914" alt="Screenshot 2026-11-22 000300" src="https://github.com/user-attachments/assets/a6792aa0-194b-48dd-9577-6baaf5a0670b" />
 
 ## Repository layout
 
