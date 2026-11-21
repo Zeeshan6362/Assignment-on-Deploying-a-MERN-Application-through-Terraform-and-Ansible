@@ -1,3 +1,6 @@
+# Note to Evaluator: I am facing issues with deployment due to Amazon Free tier account. Its not allowing me to deploy EC2 using Terraform plan and I am planning to upgrade to a paid plan. I have requested extension for this project and plan to complete it before 26h November.
+
+
 # TravelMemory with Terraform and Ansible
 
 This repository prepares the TravelMemory MERN application for a single AWS deployment, managed with Terraform and configured with Ansible. It also includes a local Docker Compose demo. No AWS resources are created by reading, validating, or preparing these files.
